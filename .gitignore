@@ -1,0 +1,13 @@
+# Terraform — binaries and state (state is stored in S3)
+.terraform/
+terraform.tfstate
+terraform.tfstate.backup
+*.tfvars
+!*.tfvars.example
+
+# H2 local database
+backend/data/
+
+# OS
+.DS_Store
+Thumbs.db

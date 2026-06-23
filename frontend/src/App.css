@@ -1,0 +1,560 @@
+/* ============================================================
+   Design tokens
+   ============================================================ */
+:root {
+  --asphalt: #243f6b;
+  --asphalt-dark: #1a3255;
+  --line-yellow: #818cf8;
+  --line-yellow-dim: #4f46e5;
+  --line-white: #e2e8f0;
+  --free-green: #34d399;
+  --free-green-dim: #064e3b;
+  --occupied-red: #fb7185;
+  --occupied-red-dim: #6b1b2e;
+  --text-muted: #94a3b8;
+  --text-muted-2: #7b90aa;
+  --display-font: "Space Grotesk", sans-serif;
+  --mono-font: "IBM Plex Mono", "Courier New", monospace;
+  --radius-sm: 5px;
+}
+
+/* ============================================================
+   Layout shell
+   ============================================================ */
+.app {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 32px 24px 80px;
+}
+
+.app-main {
+  display: grid;
+  grid-template-columns: 280px 1fr;
+  gap: 24px;
+  align-items: start;
+}
+
+@media (max-width: 760px) {
+  .app-main {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ============================================================
+   Header
+   ============================================================ */
+.app-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 20px;
+  margin-bottom: 24px;
+}
+
+.app-header .summary-bar {
+  margin-bottom: 0;
+  flex: 1;
+}
+
+.app-header__eyebrow {
+  display: block;
+  font-family: var(--mono-font);
+  font-size: 12px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--line-yellow);
+  margin-bottom: 6px;
+}
+
+.app-header__title {
+  font-family: var(--display-font);
+  font-weight: 700;
+  font-size: 32px;
+  margin: 0;
+  letter-spacing: -0.01em;
+  color: var(--line-white);
+}
+
+.reset-button {
+  background: transparent;
+  border: 1.5px solid var(--occupied-red);
+  color: var(--occupied-red);
+  font-family: var(--mono-font);
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  padding: 10px 18px;
+  border-radius: var(--radius-sm);
+  transition:
+    background-color 120ms ease,
+    color 120ms ease;
+}
+
+.reset-button:hover:not(:disabled) {
+  background-color: var(--occupied-red);
+  color: var(--asphalt-dark);
+}
+
+.reset-button:disabled {
+  opacity: 0.4;
+}
+
+/* ============================================================
+   Loading
+   ============================================================ */
+.loading-text {
+  font-family: var(--mono-font);
+  color: var(--text-muted-2);
+  font-size: 14px;
+}
+
+/* ============================================================
+   Toast
+   ============================================================ */
+.toast {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 16px;
+  border-radius: var(--radius-sm);
+  font-family: var(--mono-font);
+  font-size: 13px;
+  margin-bottom: 20px;
+  border-left: 3px solid transparent;
+}
+
+.toast--success {
+  background-color: var(--free-green-dim);
+  border-left-color: var(--free-green);
+  color: var(--free-green);
+}
+
+.toast--error {
+  background-color: var(--occupied-red-dim);
+  border-left-color: var(--occupied-red);
+  color: var(--occupied-red);
+}
+
+.toast__dismiss {
+  background: none;
+  border: none;
+  color: inherit;
+  font-size: 18px;
+  line-height: 1;
+  padding: 0 0 0 12px;
+}
+
+/* ============================================================
+   Summary bar
+   ============================================================ */
+.summary-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 16px;
+  background-color: var(--asphalt);
+  border: 1px solid #2f4e7a;
+  border-radius: var(--radius-sm);
+  padding: 18px 22px;
+  margin-bottom: 24px;
+}
+
+.summary-bar__total {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+}
+
+.summary-bar__total-number {
+  font-family: var(--display-font);
+  font-size: 36px;
+  font-weight: 700;
+  color: var(--line-yellow);
+  line-height: 1;
+}
+
+.summary-bar__total-label {
+  font-family: var(--mono-font);
+  font-size: 13px;
+  color: var(--text-muted-2);
+}
+
+.summary-bar__breakdown {
+  display: flex;
+  gap: 10px;
+}
+
+.summary-chip {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 6px 14px;
+  border-radius: var(--radius-sm);
+  border: 1px solid #2f4e7a;
+  min-width: 64px;
+}
+
+.summary-chip__label {
+  font-family: var(--mono-font);
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-muted-2);
+}
+
+.summary-chip__count {
+  font-family: var(--mono-font);
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--line-white);
+}
+
+/* ============================================================
+   Panels (shared shell for controls + grid)
+   ============================================================ */
+.panel {
+  background-color: var(--asphalt);
+  border: 1px solid #2f4e7a;
+  border-radius: var(--radius-sm);
+  padding: 20px;
+}
+
+.panel-title {
+  font-family: var(--mono-font);
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--text-muted-2);
+  margin: 0 0 16px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid #2f4e7a;
+}
+
+/* ============================================================
+   Vehicle controls
+   ============================================================ */
+.plate-input-label {
+  display: block;
+  font-family: var(--mono-font);
+  font-size: 11px;
+  color: var(--text-muted-2);
+  margin-bottom: 6px;
+}
+
+.optional-tag {
+  color: #4a6080;
+}
+
+.plate-input {
+  width: 100%;
+  background-color: var(--asphalt-dark);
+  border: 1px solid #2f4e7a;
+  border-radius: var(--radius-sm);
+  color: var(--line-white);
+  font-size: 13px;
+  padding: 9px 10px;
+  margin-bottom: 18px;
+}
+
+.plate-input:focus {
+  outline: none;
+  border-color: var(--line-yellow);
+}
+
+.vehicle-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.vehicle-button {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 3px;
+  background-color: var(--asphalt-dark);
+  border: 1px solid #2f4e7a;
+  border-left: 4px solid var(--line-yellow);
+  border-radius: var(--radius-sm);
+  padding: 12px 14px;
+  text-align: left;
+  transition:
+    background-color 120ms ease,
+    border-color 120ms ease,
+    transform 80ms ease;
+}
+
+.vehicle-button:hover:not(:disabled) {
+  background-color: #16294a;
+  border-left-color: var(--line-yellow);
+  transform: translateX(2px);
+}
+
+.vehicle-button:active:not(:disabled) {
+  transform: translateX(0);
+}
+
+.vehicle-button:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.vehicle-button__label {
+  font-family: var(--display-font);
+  font-weight: 600;
+  font-size: 14px;
+  color: var(--line-white);
+}
+
+.vehicle-button__hint {
+  font-family: var(--mono-font);
+  font-size: 11px;
+  color: var(--text-muted-2);
+}
+
+/* ============================================================
+   Concurrent parking section
+   ============================================================ */
+.concurrent-section {
+  margin-top: 20px;
+  padding-top: 16px;
+  border-top: 1px solid #2f4e7a;
+}
+
+.concurrent-title {
+  font-family: var(--mono-font);
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--text-muted-2);
+  margin: 0 0 12px;
+}
+
+.concurrent-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.concurrent-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.concurrent-label {
+  font-family: var(--mono-font);
+  font-size: 12px;
+  color: var(--line-white);
+  flex: 1;
+}
+
+.spinner-input {
+  display: flex;
+  align-items: center;
+  background-color: var(--asphalt-dark);
+  border: 1px solid #2f4e7a;
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+}
+
+.spinner-input__btn {
+  background: transparent;
+  border: none;
+  color: var(--line-yellow);
+  font-family: var(--mono-font);
+  font-size: 15px;
+  line-height: 1;
+  width: 26px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 100ms ease, color 100ms ease;
+}
+
+.spinner-input__btn:hover:not(:disabled) {
+  background-color: var(--asphalt);
+}
+
+.spinner-input__btn:disabled {
+  color: #3a5070;
+  cursor: default;
+}
+
+.spinner-input__value {
+  font-family: var(--mono-font);
+  font-size: 13px;
+  color: var(--line-white);
+  min-width: 22px;
+  text-align: center;
+  user-select: none;
+}
+
+
+/* ============================================================
+   Parking grid / lanes
+   ============================================================ */
+.lot-groups {
+  display: grid;
+  grid-template-columns: repeat(3, max-content);
+  align-items: start;
+  overflow-x: auto;
+  padding-bottom: 4px;
+}
+
+.lane {
+  display: inline-block;
+}
+
+.lane:not(:last-child) {
+  padding-right: 24px;
+  border-right: 1px solid #2f4e7a;
+}
+
+.lane:not(:first-child) {
+  padding-left: 24px;
+}
+
+.lane__label {
+  font-family: var(--mono-font);
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-muted-2);
+  margin-bottom: 10px;
+  white-space: nowrap;
+}
+
+.lane__spots {
+  display: grid;
+  grid-template-rows: repeat(3, auto);
+  grid-auto-flow: column;
+  grid-auto-columns: 70px;
+  gap: 5px;
+}
+
+/* ============================================================
+   Individual spot
+   ============================================================ */
+.spot {
+  position: relative;
+  aspect-ratio: 3 / 4;
+  border-radius: var(--radius-sm);
+  border: 1.5px solid var(--line-yellow-dim);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 6px 4px;
+  background:
+    repeating-linear-gradient(
+      to bottom,
+      transparent,
+      transparent 6px,
+      rgba(129, 140, 248, 0.08) 6px,
+      rgba(129, 140, 248, 0.08) 7px
+    ),
+    var(--asphalt-dark);
+}
+
+.spot--free {
+  border-style: dashed;
+}
+
+.spot--occupied {
+  border-style: solid;
+  border-color: var(--occupied-red);
+}
+
+.spot--relocating {
+  border-style: solid;
+  border-color: var(--line-yellow);
+  animation: relocating-pulse 1.4s ease-in-out infinite;
+}
+
+@keyframes relocating-pulse {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.55; }
+}
+
+.spot__id {
+  font-family: var(--mono-font);
+  font-size: 9px;
+  letter-spacing: 0.04em;
+  color: var(--text-muted-2);
+  position: absolute;
+  top: 5px;
+  left: 6px;
+}
+
+.spot__free-label {
+  font-family: var(--mono-font);
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--free-green);
+  margin-top: 8px;
+}
+
+.spot__occupant {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  margin-top: 6px;
+}
+
+.spot__icon {
+  font-size: 18px;
+  line-height: 1;
+}
+
+.spot__plate {
+  font-family: var(--mono-font);
+  font-size: 9px;
+  color: var(--line-white);
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.spot__relocating-label {
+  font-family: var(--mono-font);
+  font-size: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--line-yellow);
+  margin-top: 1px;
+}
+
+.spot__clear-button {
+  background: transparent;
+  border: 1px solid var(--occupied-red);
+  color: var(--occupied-red);
+  font-family: var(--mono-font);
+  font-size: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 2px 6px;
+  border-radius: var(--radius-sm);
+  margin-top: 1px;
+  transition:
+    background-color 120ms ease,
+    color 120ms ease;
+}
+
+.spot__clear-button:hover:not(:disabled) {
+  background-color: var(--occupied-red);
+  color: var(--asphalt-dark);
+}
+
+.spot__clear-button:disabled {
+  opacity: 0.4;
+}
