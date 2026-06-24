@@ -212,6 +212,6 @@ public class ParkingLotService {
     }
 
     private String generatePlaceholderPlate() {
-        return "TEMP-" + UUID.randomUUID().toString().substring(0, 6).toUpperCase();
+        return UUID.randomUUID().toString().substring(0, 6).toUpperCase();
     }
 }
