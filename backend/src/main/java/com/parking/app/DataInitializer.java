@@ -9,6 +9,7 @@ import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.IntStream;
 
 @Component
 public class DataInitializer implements ApplicationRunner {
@@ -24,9 +25,12 @@ public class DataInitializer implements ApplicationRunner {
         if (repository.count() > 0) return;
 
         List<ParkingSpot> spots = new ArrayList<>();
-        for (int i = 1; i <= 9; i++) spots.add(new ParkingSpot("S-%02d".formatted(i), SpotSize.SMALL));
-        for (int i = 1; i <= 9; i++) spots.add(new ParkingSpot("M-%02d".formatted(i), SpotSize.MEDIUM));
-        for (int i = 1; i <= 9; i++) spots.add(new ParkingSpot("L-%02d".formatted(i), SpotSize.LARGE));
+        IntStream.range(1, 9).forEach(num -> {
+            spots.add(new ParkingSpot("S-%02d".formatted(num), SpotSize.SMALL));
+            spots.add(new ParkingSpot("M-%02d".formatted(num), SpotSize.MEDIUM));
+            spots.add(new ParkingSpot("L-%02d".formatted(num), SpotSize.LARGE));
+        });
+
         repository.saveAll(spots);
     }
 }
