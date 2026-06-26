@@ -8,9 +8,13 @@ import com.parking.app.exception.NoAvailableSpotException;
 import com.parking.app.exception.SpotAlreadyFreeException;
 import com.parking.app.exception.SpotNotFoundException;
 import com.parking.app.model.ParkingSpot;
+import com.parking.app.model.Relocation;
+import com.parking.app.model.RelocationStatus;
 import com.parking.app.model.SpotSize;
+import com.parking.app.model.SpotStatus;
 import com.parking.app.model.VehicleType;
 import com.parking.app.repository.ParkingSpotRepository;
+import com.parking.app.repository.RelocationRepository;
 import io.awspring.cloud.sqs.operations.SqsTemplate;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -40,7 +44,9 @@ public class ParkingLotService {
     private static final Logger log = LoggerFactory.getLogger(ParkingLotService.class);
 
     private final ParkingSpotRepository repository;
+    private final RelocationRepository relocationRepository;
     private final SqsTemplate sqsTemplate;
+    private final ParkingEventPublisher eventPublisher;
 
     @Value("${parking.sqs.relocation-queue}")
     private String relocationQueue;
@@ -49,9 +55,14 @@ public class ParkingLotService {
     @Autowired @Lazy
     private ParkingLotService self;
 
-    public ParkingLotService(ParkingSpotRepository repository, SqsTemplate sqsTemplate) {
+    public ParkingLotService(ParkingSpotRepository repository,
+                              RelocationRepository relocationRepository,
+                              SqsTemplate sqsTemplate,
+                              ParkingEventPublisher eventPublisher) {
         this.repository = repository;
+        this.relocationRepository = relocationRepository;
         this.sqsTemplate = sqsTemplate;
+        this.eventPublisher = eventPublisher;
     }
 
     @Transactional(readOnly = true)
@@ -63,9 +74,7 @@ public class ParkingLotService {
     }
 
     /**
-     * Parks a vehicle, retrying up to 3 times on optimistic lock conflicts.
-     * Two concurrent requests may race to claim the same free spot; the loser
-     * gets ObjectOptimisticLockingFailureException at commit time and retries.
+     * Parks a vehicle, retrying up to 10 times on optimistic lock conflicts.
      */
     public ParkingSpot parkVehicle(VehicleType vehicleType, String licensePlateInput) {
         String licensePlate = (licensePlateInput == null || licensePlateInput.isBlank())
@@ -74,7 +83,9 @@ public class ParkingLotService {
 
         for (int attempt = 0; attempt < 10; attempt++) {
             try {
-                return self.tryParkVehicle(vehicleType, licensePlate);
+                ParkingSpot result = self.tryParkVehicle(vehicleType, licensePlate);
+                eventPublisher.publishUpdate();
+                return result;
             } catch (OptimisticLockingFailureException ignored) {
                 // another transaction grabbed the same spot; retry with fresh DB state
             }
@@ -101,10 +112,12 @@ public class ParkingLotService {
             return repository.save(spot);
         }
 
-        // Relocation path: find a compatible occupied slot whose current occupant
+        // Relocation path: find a compatible OCCUPIED slot whose current occupant
         // requires a smaller size and can be moved to a free smaller slot.
+        // Exclude RELOCATING spots to prevent cascading relocations.
         List<ParkingSpot> relocationCandidates = all.stream()
-                .filter(s -> !s.isFree() && s.getSize().canFit(required))
+                .filter(s -> s.getStatus() == SpotStatus.OCCUPIED)
+                .filter(s -> s.getSize().canFit(required))
                 .filter(s -> s.getOccupiedBy().getRequiredSize().ordinal() < s.getSize().ordinal())
                 .sorted(Comparator.comparingInt(s -> s.getSize().ordinal()))
                 .toList();
@@ -118,27 +131,31 @@ public class ParkingLotService {
 
             if (dest.isEmpty()) continue;
 
-            // Reserve the destination with RELOCATING status (vehicle is in transit).
             ParkingSpot destination = dest.get();
             destination.startRelocation(candidate.getOccupiedBy(), candidate.getLicensePlate());
             repository.save(destination);
 
-            // Park the new vehicle in the freed slot immediately.
             candidate.clear();
-            candidate.occupy(vehicleType, licensePlate);
+            candidate.startRelocation(vehicleType, licensePlate);
             ParkingSpot result = repository.save(candidate);
 
-            // Publish to SQS — consumer will complete the move after a 5–10 s delay.
-            sqsTemplate.send(to -> to.queue(relocationQueue).payload(new RelocationMessage(destination.getId())));
+            Relocation relocation = new Relocation(candidate.getId(), destination.getId());
+            relocationRepository.save(relocation);
+
+            sqsTemplate.send(to -> to.queue(relocationQueue)
+                    .payload(new RelocationMessage(
+                            relocation.getId(),
+                            relocation.getSourceSpotId(),
+                            relocation.getDestinationSpotId())));
             return result;
         }
 
-        throw new NoAvailableSpotException("No available spot" + 
-            "for vehicle type " + vehicleType +
+        throw new NoAvailableSpotException("No available spot for vehicle type " + vehicleType +
             " (requires at least a " + required + " spot)");
     }
 
     @Transactional
+    @SuppressWarnings("null")
     public ParkingSpot clearSpot(String spotId) {
         ParkingSpot spot = repository.findById(spotId)
                 .orElseThrow(() -> new SpotNotFoundException("No spot found with id " + spotId));
@@ -146,7 +163,9 @@ public class ParkingLotService {
             throw new SpotAlreadyFreeException("Spot " + spotId + " is already free");
         }
         spot.clear();
-        return repository.save(spot);
+        ParkingSpot result = repository.save(spot);
+        eventPublisher.publishUpdate();
+        return result;
     }
 
     @Transactional
@@ -154,6 +173,12 @@ public class ParkingLotService {
         List<ParkingSpot> all = repository.findAll();
         all.forEach(ParkingSpot::clear);
         repository.saveAll(all);
+
+        List<Relocation> active = relocationRepository.findByStatus(RelocationStatus.IN_PROGRESS);
+        active.forEach(Relocation::fail);
+        relocationRepository.saveAll(active);
+
+        eventPublisher.publishUpdate();
     }
 
     @Transactional(readOnly = true)
@@ -173,11 +198,8 @@ public class ParkingLotService {
 
     /**
      * Parks multiple vehicles concurrently using one virtual thread per vehicle.
-     * Each thread runs through the same optimistic-locking retry path as a
-     * normal single park request, so correctness is preserved under contention.
      */
     public ConcurrentParkResult parkConcurrently(ConcurrentParkRequest request) {
-
         List<Callable<Void>> tasks = new ArrayList<>();
         addParkTasks(tasks, VehicleType.MOTORCYCLE, request.motorcycleCount());
         addParkTasks(tasks, VehicleType.CAR, request.carCount());
@@ -202,12 +224,16 @@ public class ParkingLotService {
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
         }
+        eventPublisher.publishUpdate();
         return new ConcurrentParkResult(parked, failed);
     }
 
     private void addParkTasks(List<Callable<Void>> tasks, VehicleType type, int count) {
         for (int i = 0; i < count; i++) {
-            tasks.add(() -> { parkVehicle(type, null); return null; });
+            tasks.add(() -> {
+                parkVehicle(type, null);
+                return null;
+            });
         }
     }
 

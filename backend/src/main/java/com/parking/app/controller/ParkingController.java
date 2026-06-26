@@ -6,11 +6,14 @@ import com.parking.app.dto.ConcurrentParkResult;
 import com.parking.app.dto.ParkVehicleRequest;
 import com.parking.app.dto.ParkingSpotResponse;
 import com.parking.app.model.ParkingSpot;
+import com.parking.app.service.ParkingEventPublisher;
 import com.parking.app.service.ParkingLotService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import java.util.List;
 
@@ -29,9 +32,17 @@ import java.util.List;
 public class ParkingController {
 
     private final ParkingLotService parkingLotService;
+    private final ParkingEventPublisher eventPublisher;
 
-    public ParkingController(ParkingLotService parkingLotService) {
+    public ParkingController(ParkingLotService parkingLotService,
+                              ParkingEventPublisher eventPublisher) {
         this.parkingLotService = parkingLotService;
+        this.eventPublisher = eventPublisher;
+    }
+
+    @GetMapping(value = "/events", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+    public SseEmitter subscribe() {
+        return eventPublisher.subscribe();
     }
 
     @GetMapping("/spots")

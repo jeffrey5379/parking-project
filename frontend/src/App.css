@@ -122,6 +122,20 @@
   font-size: 13px;
   margin-bottom: 20px;
   border-left: 3px solid transparent;
+  min-height: 44px;
+  animation: toast-life 5s ease forwards;
+}
+
+.toast--empty {
+  visibility: hidden;
+  animation: none;
+}
+
+@keyframes toast-life {
+  0%   { opacity: 0; transform: translateY(4px); }
+  8%   { opacity: 1; transform: translateY(0); }
+  85%  { opacity: 1; transform: translateY(0); }
+  100% { opacity: 0; transform: translateY(-6px); }
 }
 
 .toast--success {

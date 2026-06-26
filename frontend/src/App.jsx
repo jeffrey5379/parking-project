@@ -1,7 +1,6 @@
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import {
-  fetchSpots,
-  fetchAvailability,
+  EVENTS_URL,
   parkVehicle,
   parkConcurrently,
   clearSpot,
@@ -13,55 +12,44 @@ import ParkingGrid from "./components/ParkingGrid";
 import Toast from "./components/Toast";
 import "./App.css";
 
-const POLL_INTERVAL_MS = 5000;
-
 export default function App() {
   const [spots, setSpots] = useState([]);
   const [summary, setSummary] = useState(null);
   const [isBusy, setIsBusy] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
-  const [toast, setToast] = useState({ message: "", kind: "error" });
+  const [toast, setToast] = useState({ id: 0, message: "", kind: "error" });
 
-  const loadState = useCallback(async () => {
-    try {
-      const [spotsData, availabilityData] = await Promise.all([
-        fetchSpots(),
-        fetchAvailability(),
-      ]);
-      setSpots(spotsData);
-      setSummary(availabilityData);
-    } catch (error) {
-      setToast({
-        message: `Could not reach the parking service: ${error.message}`,
-        kind: "error",
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
+  function showToast(message, kind) {
+    setToast({ id: Date.now(), message, kind });
+  }
 
   useEffect(() => {
-    // Wrapping in a named async function (rather than calling loadState
-    // directly in the effect body) keeps the effect itself synchronous,
-    // which is what the react-hooks/set-state-in-effect rule expects —
-    // state updates happen inside the async callback, not the effect body.
-    async function pollOnce() {
-      await loadState();
-    }
+    const es = new EventSource(EVENTS_URL);
 
-    pollOnce();
-    const intervalId = setInterval(pollOnce, POLL_INTERVAL_MS);
-    return () => clearInterval(intervalId);
-  }, [loadState]);
+    es.addEventListener("parking-update", (e) => {
+      const { spots: updatedSpots, summary: updatedSummary, notification } = JSON.parse(e.data);
+      setSpots(updatedSpots);
+      setSummary(updatedSummary);
+      if (notification) {
+        showToast(notification.message, notification.kind);
+      }
+      setIsLoading(false);
+    });
+
+    es.onerror = () => {
+      // EventSource reconnects automatically; nothing to do here.
+    };
+
+    return () => es.close();
+  }, []);
 
   async function handlePark(vehicleType, licensePlate) {
     setIsBusy(true);
     try {
       const spot = await parkVehicle(vehicleType, licensePlate);
-      setToast({ message: `Parked in spot ${spot.id}.`, kind: "success" });
-      await loadState();
+      showToast(`Parked in spot ${spot.id}.`, "success");
     } catch (error) {
-      setToast({ message: error.message, kind: "error" });
+      showToast(error.message, "error");
     } finally {
       setIsBusy(false);
     }
@@ -71,10 +59,9 @@ export default function App() {
     setIsBusy(true);
     try {
       await clearSpot(spotId);
-      setToast({ message: `Spot ${spotId} cleared.`, kind: "success" });
-      await loadState();
+      showToast(`Spot ${spotId} cleared.`, "success");
     } catch (error) {
-      setToast({ message: error.message, kind: "error" });
+      showToast(error.message, "error");
     } finally {
       setIsBusy(false);
     }
@@ -85,10 +72,9 @@ export default function App() {
     try {
       const result = await parkConcurrently(motorcycleCount, carCount, truckCount);
       const msg = `Parked ${result.parked}${result.failed > 0 ? `, ${result.failed} failed` : ''}.`;
-      setToast({ message: msg, kind: result.failed === 0 ? "success" : "error" });
-      await loadState();
+      showToast(msg, result.failed === 0 ? "success" : "error");
     } catch (error) {
-      setToast({ message: error.message, kind: "error" });
+      showToast(error.message, "error");
     } finally {
       setIsBusy(false);
     }
@@ -98,17 +84,16 @@ export default function App() {
     setIsBusy(true);
     try {
       await resetLot();
-      setToast({ message: "Lot reset. All spots are free.", kind: "success" });
-      await loadState();
+      showToast("Lot reset. All spots are free.", "success");
     } catch (error) {
-      setToast({ message: error.message, kind: "error" });
+      showToast(error.message, "error");
     } finally {
       setIsBusy(false);
     }
   }
 
   function dismissToast() {
-    setToast({ message: "", kind: "error" });
+    setToast({ id: 0, message: "", kind: "error" });
   }
 
   return (
@@ -130,6 +115,7 @@ export default function App() {
       </header>
 
       <Toast
+        key={toast.id}
         message={toast.message}
         kind={toast.kind}
         onDismiss={dismissToast}
