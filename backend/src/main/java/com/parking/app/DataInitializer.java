@@ -25,7 +25,7 @@ public class DataInitializer implements ApplicationRunner {
         if (repository.count() > 0) return;
 
         List<ParkingSpot> spots = new ArrayList<>();
-        IntStream.range(1, 9).forEach(num -> {
+        IntStream.range(1, 10).forEach(num -> {
             spots.add(new ParkingSpot("S-%02d".formatted(num), SpotSize.SMALL));
             spots.add(new ParkingSpot("M-%02d".formatted(num), SpotSize.MEDIUM));
             spots.add(new ParkingSpot("L-%02d".formatted(num), SpotSize.LARGE));

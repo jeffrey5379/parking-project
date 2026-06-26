@@ -7,9 +7,6 @@ import com.parking.app.model.VehicleType;
 
 import java.time.Instant;
 
-/**
- * Read-only representation of a parking spot returned to API clients.
- */
 public record ParkingSpotResponse(
         String id,
         SpotSize size,

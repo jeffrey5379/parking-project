@@ -1,5 +1,7 @@
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api/parking';
 
+export const EVENTS_URL = `${API_BASE_URL}/events`;
+
 /**
  * Thin wrapper around the parking lot REST API.
  * Each function returns parsed JSON or throws an Error with a readable
